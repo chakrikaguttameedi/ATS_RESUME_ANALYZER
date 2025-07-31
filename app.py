@@ -25,7 +25,6 @@ st.set_page_config(
 
 class ATSAnalyzer:
     def __init__(self, api_key: str = None, provider: str = "demo"):
-        """Initialize the ATS analyzer with different LLM providers"""
         self.provider = provider
         self.api_key = api_key
         
@@ -35,7 +34,6 @@ class ATSAnalyzer:
             self.client = None
     
     def extract_text_from_pdf(self, uploaded_file) -> str:
-        """Extract text from PDF file"""
         try:
             pdf_reader = PyPDF2.PdfReader(uploaded_file)
             text = ""
@@ -47,7 +45,6 @@ class ATSAnalyzer:
             return ""
     
     def extract_text_from_docx(self, uploaded_file) -> str:
-        """Extract text from DOCX file"""
         try:
             doc = docx.Document(uploaded_file)
             text = ""
@@ -59,7 +56,6 @@ class ATSAnalyzer:
             return ""
     
     def extract_text_from_file(self, uploaded_file) -> str:
-        """Extract text based on file type"""
         if uploaded_file.type == "application/pdf":
             return self.extract_text_from_pdf(uploaded_file)
         elif uploaded_file.type == "application/vnd.openxmlformats-officedocument.wordprocessingml.document":
@@ -71,13 +67,9 @@ class ATSAnalyzer:
             return ""
     
     def analyze_with_huggingface(self, resume_text: str, job_description: str) -> Dict:
-        """Use Hugging Face free API for analysis"""
         try:
-            # Use a simple approach with Hugging Face Inference API (free tier)
             api_url = "https://api-inference.huggingface.co/models/microsoft/DialoGPT-medium"
-            
             prompt = f"Analyze this resume for job fit. Resume: {resume_text[:500]}... Job: {job_description[:500]}..."
-            
             headers = {"Authorization": f"Bearer {self.api_key}"} if self.api_key else {}
             payload = {"inputs": prompt}
             
@@ -87,13 +79,11 @@ class ATSAnalyzer:
                     return self.enhanced_analysis(resume_text, job_description)
             
             return self.enhanced_analysis(resume_text, job_description)
-            
         except Exception as e:
             st.warning(f"HuggingFace API issue: {str(e)}. Using enhanced analysis.")
             return self.enhanced_analysis(resume_text, job_description)
     
     def analyze_resume_with_llm(self, resume_text: str, job_description: str) -> Dict:
-        """Analyze resume against job description using selected LLM provider"""
         if self.provider == "openai" and self.client:
             return self.analyze_with_openai(resume_text, job_description)
         elif self.provider == "huggingface":
@@ -102,7 +92,6 @@ class ATSAnalyzer:
             return self.enhanced_analysis(resume_text, job_description)
     
     def analyze_with_openai(self, resume_text: str, job_description: str) -> Dict:
-        """OpenAI analysis method"""
         prompt = f"""
         You are an expert ATS (Applicant Tracking System) analyzer. Analyze the following resume against the job description and provide a comprehensive evaluation.
 
@@ -124,8 +113,6 @@ class ATSAnalyzer:
             "weaknesses": [<list of areas for improvement>],
             "overall_feedback": "<detailed feedback about the resume's fit for this job>"
         }}
-
-        Be specific and actionable in your recommendations. Focus on ATS optimization, keyword matching, and relevant skills alignment.
         """
         
         try:
@@ -138,26 +125,20 @@ class ATSAnalyzer:
                 temperature=0.3
             )
             
-            # Parse the JSON response
             analysis_text = response.choices[0].message.content
-            # Extract JSON from the response
             json_start = analysis_text.find('{')
             json_end = analysis_text.rfind('}') + 1
             json_str = analysis_text[json_start:json_end]
-            
             return json.loads(json_str)
-            
         except Exception as e:
             st.error(f"Error with OpenAI analysis: {str(e)}")
             st.info("Falling back to enhanced local analysis...")
             return self.enhanced_analysis(resume_text, job_description)
     
     def get_role_specific_skills(self, job_description: str) -> Dict:
-        """Get role-specific required skills based on job description keywords"""
         job_lower = job_description.lower()
-        
-        # Define role-specific skill sets
         role_skills = {
+            # Software Development Roles
             'java_developer': {
                 'keywords': ['java developer', 'java', 'spring', 'springboot'],
                 'skills': ['Java', 'Spring Boot', 'Spring Framework', 'Hibernate', 'Maven', 'Gradle', 'JUnit', 'REST API', 'Microservices', 'SQL', 'Git']
@@ -174,14 +155,6 @@ class ATSAnalyzer:
                 'keywords': ['fullstack', 'full-stack', 'full stack'],
                 'skills': ['JavaScript', 'React', 'Node.js', 'Express.js', 'MongoDB', 'SQL', 'HTML', 'CSS', 'Git', 'REST API', 'Docker']
             },
-            'data_scientist': {
-                'keywords': ['data scientist', 'data science', 'machine learning'],
-                'skills': ['Python', 'R', 'Machine Learning', 'Pandas', 'NumPy', 'Scikit-learn', 'TensorFlow', 'SQL', 'Jupyter', 'Statistics', 'Data Visualization']
-            },
-            'devops_engineer': {
-                'keywords': ['devops', 'sre', 'site reliability'],
-                'skills': ['Docker', 'Kubernetes', 'AWS', 'Jenkins', 'Git', 'Linux', 'Terraform', 'Ansible', 'CI/CD', 'Monitoring', 'Bash']
-            },
             'cpp_developer': {
                 'keywords': ['c++ developer', 'c++', 'cpp'],
                 'skills': ['C++', 'Object Oriented Programming', 'STL', 'Data Structures', 'Algorithms', 'GCC', 'CMake', 'Git', 'Linux', 'Debugging']
@@ -189,40 +162,194 @@ class ATSAnalyzer:
             'mobile_developer': {
                 'keywords': ['android developer', 'ios developer', 'mobile developer', 'react native', 'flutter'],
                 'skills': ['Java', 'Kotlin', 'Swift', 'React Native', 'Flutter', 'Android Studio', 'Xcode', 'REST API', 'Git', 'Mobile UI/UX']
+            },
+            'backend_developer': {
+                'keywords': ['backend developer', 'backend', 'server side', 'api developer'],
+                'skills': ['Python', 'Java', 'Node.js', 'Express.js', 'Django', 'Spring Boot', 'REST API', 'GraphQL', 'SQL', 'MongoDB', 'Redis', 'Git']
+            },
+            'dotnet_developer': {
+                'keywords': ['.net developer', 'c# developer', 'asp.net', 'dotnet'],
+                'skills': ['C#', '.NET Framework', '.NET Core', 'ASP.NET', 'Entity Framework', 'SQL Server', 'Azure', 'Visual Studio', 'Git', 'REST API']
+            },
+            'golang_developer': {
+                'keywords': ['golang developer', 'go developer', 'go lang'],
+                'skills': ['Go', 'Golang', 'Gin', 'Gorilla', 'Docker', 'Kubernetes', 'REST API', 'gRPC', 'PostgreSQL', 'Redis', 'Git']
+            },
+            
+            # AI/ML/Data Roles
+            'genai_engineer': {
+                'keywords': ['generative ai', 'genai', 'gen ai', 'ai engineer', 'llm engineer', 'chatgpt', 'gpt'],
+                'skills': ['Python', 'LangChain', 'OpenAI API', 'Hugging Face', 'Transformers', 'PyTorch', 'TensorFlow', 'Vector Databases', 'RAG', 'Prompt Engineering', 'LLAMA', 'GPT']
+            },
+            'ai_engineer': {
+                'keywords': ['ai engineer', 'artificial intelligence', 'machine learning engineer', 'deep learning'],
+                'skills': ['Python', 'TensorFlow', 'PyTorch', 'Keras', 'Scikit-learn', 'OpenCV', 'Neural Networks', 'Deep Learning', 'Computer Vision', 'NLP', 'MLOps']
+            },
+            'ml_engineer': {
+                'keywords': ['ml engineer', 'machine learning engineer', 'mlops', 'machine learning'],
+                'skills': ['Python', 'TensorFlow', 'PyTorch', 'Scikit-learn', 'MLflow', 'Kubeflow', 'Docker', 'Kubernetes', 'AWS SageMaker', 'Model Deployment', 'Feature Engineering']
+            },
+            'data_scientist': {
+                'keywords': ['data scientist', 'data science'],
+                'skills': ['Python', 'R', 'Machine Learning', 'Pandas', 'NumPy', 'Scikit-learn', 'TensorFlow', 'SQL', 'Jupyter', 'Statistics', 'Data Visualization', 'Matplotlib', 'Seaborn']
+            },
+            'data_analyst': {
+                'keywords': ['data analyst', 'business analyst', 'data analytics'],
+                'skills': ['SQL', 'Python', 'R', 'Excel', 'Tableau', 'Power BI', 'Pandas', 'NumPy', 'Statistics', 'Data Visualization', 'Google Analytics', 'ETL']
+            },
+            'data_engineer': {
+                'keywords': ['data engineer', 'data engineering', 'etl developer'],
+                'skills': ['Python', 'SQL', 'Apache Spark', 'Hadoop', 'Kafka', 'Airflow', 'ETL', 'AWS', 'Azure', 'Google Cloud', 'Docker', 'Kubernetes']
+            },
+            'computer_vision_engineer': {
+                'keywords': ['computer vision', 'cv engineer', 'image processing'],
+                'skills': ['Python', 'OpenCV', 'TensorFlow', 'PyTorch', 'YOLO', 'CNN', 'Image Processing', 'Deep Learning', 'NumPy', 'Matplotlib', 'Keras']
+            },
+            'nlp_engineer': {
+                'keywords': ['nlp engineer', 'natural language processing', 'text analytics'],
+                'skills': ['Python', 'NLTK', 'spaCy', 'Transformers', 'BERT', 'GPT', 'TensorFlow', 'PyTorch', 'Hugging Face', 'Text Processing', 'Sentiment Analysis']
+            },
+            
+            # DevOps/Cloud/Infrastructure
+            'devops_engineer': {
+                'keywords': ['devops', 'sre', 'site reliability'],
+                'skills': ['Docker', 'Kubernetes', 'AWS', 'Jenkins', 'Git', 'Linux', 'Terraform', 'Ansible', 'CI/CD', 'Monitoring', 'Bash']
+            },
+            'cloud_engineer': {
+                'keywords': ['cloud engineer', 'aws engineer', 'azure engineer', 'gcp engineer'],
+                'skills': ['AWS', 'Azure', 'Google Cloud', 'Docker', 'Kubernetes', 'Terraform', 'CloudFormation', 'Lambda', 'EC2', 'S3', 'VPC']
+            },
+            'aws_engineer': {
+                'keywords': ['aws engineer', 'aws developer', 'amazon web services'],
+                'skills': ['AWS', 'EC2', 'S3', 'Lambda', 'RDS', 'VPC', 'IAM', 'CloudFormation', 'API Gateway', 'DynamoDB', 'CloudWatch']
+            },
+            'azure_engineer': {
+                'keywords': ['azure engineer', 'azure developer', 'microsoft azure'],
+                'skills': ['Microsoft Azure', 'Azure Functions', 'Azure Storage', 'Azure SQL', 'ARM Templates', 'Azure DevOps', 'Power BI', 'Azure AD']
+            },
+            'sre_engineer': {
+                'keywords': ['sre', 'site reliability engineer', 'platform engineer'],
+                'skills': ['Kubernetes', 'Docker', 'Prometheus', 'Grafana', 'Linux', 'Python', 'Go', 'Terraform', 'Monitoring', 'Incident Management', 'Automation']
+            },
+            
+            # Engineering Roles
+            'mechanical_engineer': {
+                'keywords': ['mechanical engineer', 'mechanical engineering', 'design engineer'],
+                'skills': ['AutoCAD', 'SolidWorks', 'CATIA', 'ANSYS', 'MATLAB', 'Mechanical Design', 'CAD', 'FEA', 'Manufacturing', 'Project Management', 'Quality Control']
+            },
+            'civil_engineer': {
+                'keywords': ['civil engineer', 'civil engineering', 'structural engineer'],
+                'skills': ['AutoCAD', 'Revit', 'SAP2000', 'STAAD Pro', 'Structural Design', 'Construction Management', 'Project Planning', 'Surveying', 'Concrete Design', 'Steel Design']
+            },
+            'electrical_engineer': {
+                'keywords': ['electrical engineer', 'electrical engineering', 'electronics engineer'],
+                'skills': ['Circuit Design', 'PCB Design', 'MATLAB', 'Simulink', 'PLC Programming', 'AutoCAD Electrical', 'Power Systems', 'Control Systems', 'Embedded Systems']
+            },
+            'software_engineer': {
+                'keywords': ['software engineer', 'software developer', 'programmer'],
+                'skills': ['Python', 'Java', 'JavaScript', 'C++', 'Data Structures', 'Algorithms', 'Object Oriented Programming', 'Git', 'REST API', 'Databases', 'Testing']
+            },
+            'embedded_engineer': {
+                'keywords': ['embedded engineer', 'embedded systems', 'firmware engineer'],
+                'skills': ['C', 'C++', 'Embedded C', 'Microcontrollers', 'Arduino', 'Raspberry Pi', 'RTOS', 'PCB Design', 'Hardware Debugging', 'Assembly Language']
+            },
+            
+            # QA/Testing
+            'qa_engineer': {
+                'keywords': ['qa engineer', 'quality assurance', 'test engineer', 'software tester'],
+                'skills': ['Manual Testing', 'Automation Testing', 'Selenium', 'TestNG', 'JUnit', 'API Testing', 'Performance Testing', 'Bug Tracking', 'Test Planning', 'JIRA']
+            },
+            'sdet_engineer': {
+                'keywords': ['sdet', 'automation engineer', 'test automation'],
+                'skills': ['Java', 'Python', 'Selenium', 'TestNG', 'Cucumber', 'REST Assured', 'API Testing', 'CI/CD', 'Git', 'Maven', 'Jenkins']
+            },
+            
+            # Database/Analytics
+            'database_administrator': {
+                'keywords': ['dba', 'database administrator', 'database engineer'],
+                'skills': ['SQL', 'MySQL', 'PostgreSQL', 'Oracle', 'SQL Server', 'Database Design', 'Performance Tuning', 'Backup Recovery', 'Database Security']
+            },
+            'business_intelligence': {
+                'keywords': ['bi developer', 'business intelligence', 'etl developer'],
+                'skills': ['SQL', 'ETL', 'Data Warehousing', 'Tableau', 'Power BI', 'SSIS', 'SSRS', 'Data Modeling', 'Business Analysis']
+            },
+            
+            # Cybersecurity
+            'cybersecurity_engineer': {
+                'keywords': ['cybersecurity', 'security engineer', 'information security'],
+                'skills': ['Network Security', 'Penetration Testing', 'Vulnerability Assessment', 'SIEM', 'Incident Response', 'Risk Assessment', 'Compliance', 'Firewalls']
+            },
+            'security_analyst': {
+                'keywords': ['security analyst', 'cyber security analyst', 'soc analyst'],
+                'skills': ['SIEM', 'Incident Response', 'Threat Analysis', 'Vulnerability Management', 'Security Monitoring', 'Malware Analysis', 'Risk Assessment']
+            },
+            
+            # Product/Project Management
+            'product_manager': {
+                'keywords': ['product manager', 'product owner', 'pm'],
+                'skills': ['Product Strategy', 'Roadmap Planning', 'User Research', 'Agile', 'Scrum', 'A/B Testing', 'Analytics', 'Stakeholder Management', 'JIRA', 'Confluence']
+            },
+            'project_manager': {
+                'keywords': ['project manager', 'program manager', 'pmp'],
+                'skills': ['Project Management', 'Agile', 'Scrum', 'Risk Management', 'Stakeholder Management', 'Budget Management', 'MS Project', 'JIRA', 'Communication']
+            },
+            
+            # Design/UX
+            'ui_ux_designer': {
+                'keywords': ['ui designer', 'ux designer', 'ui/ux', 'user experience'],
+                'skills': ['Figma', 'Adobe XD', 'Sketch', 'Photoshop', 'User Research', 'Wireframing', 'Prototyping', 'Design Systems', 'HTML', 'CSS']
+            },
+            'graphic_designer': {
+                'keywords': ['graphic designer', 'visual designer', 'creative designer'],
+                'skills': ['Adobe Photoshop', 'Adobe Illustrator', 'Adobe InDesign', 'CorelDraw', 'Branding', 'Typography', 'Print Design', 'Digital Design']
+            },
+            
+            # Sales/Marketing
+            'digital_marketing': {
+                'keywords': ['digital marketing', 'marketing manager', 'seo specialist'],
+                'skills': ['SEO', 'SEM', 'Google Analytics', 'Social Media Marketing', 'Content Marketing', 'Email Marketing', 'PPC', 'Marketing Automation']
+            },
+            'sales_engineer': {
+                'keywords': ['sales engineer', 'technical sales', 'pre sales'],
+                'skills': ['Technical Sales', 'Product Demonstration', 'Customer Relationship', 'Solution Design', 'Presentation Skills', 'CRM', 'Lead Generation']
             }
         }
         
-        # Find matching role
         for role, data in role_skills.items():
             for keyword in data['keywords']:
                 if keyword in job_lower:
                     return {'role': role, 'skills': data['skills']}
         
-        # If no specific role found, extract general skills
         general_skills = [
-            'Python', 'Java', 'JavaScript', 'C++', 'SQL', 'HTML', 'CSS', 'React', 'Angular', 'Vue.js',
-            'Node.js', 'Django', 'Flask', 'Spring', 'Docker', 'Kubernetes', 'AWS', 'Azure', 'GCP',
-            'Machine Learning', 'Data Science', 'Git', 'REST API', 'MongoDB', 'PostgreSQL', 'MySQL'
+            # Programming Languages
+            'Python', 'Java', 'JavaScript', 'C++', 'C#', 'Go', 'R', 'PHP', 'Ruby', 'Swift', 'Kotlin',
+            # Web Technologies
+            'HTML', 'CSS', 'React', 'Angular', 'Vue.js', 'Node.js', 'Django', 'Flask', 'Spring', 'ASP.NET',
+            # Databases
+            'SQL', 'MySQL', 'PostgreSQL', 'MongoDB', 'Redis', 'Oracle', 'SQL Server', 'DynamoDB',
+            # Cloud & DevOps
+            'AWS', 'Azure', 'Google Cloud', 'Docker', 'Kubernetes', 'Jenkins', 'Git', 'CI/CD', 'Terraform',
+            # AI/ML/Data
+            'Machine Learning', 'Deep Learning', 'TensorFlow', 'PyTorch', 'Pandas', 'NumPy', 'Scikit-learn',
+            'Data Science', 'Data Analytics', 'Statistics', 'NLP', 'Computer Vision', 'LangChain', 'OpenAI',
+            # Design & Tools
+            'Figma', 'Adobe Photoshop', 'AutoCAD', 'SolidWorks', 'Tableau', 'Power BI', 'JIRA', 'Confluence',
+            # Testing & Quality
+            'Selenium', 'JUnit', 'Testing', 'Quality Assurance', 'API Testing',
+            # General Skills
+            'REST API', 'Microservices', 'Agile', 'Scrum', 'Project Management'
         ]
         
-        found_skills = []
-        for skill in general_skills:
-            if skill.lower() in job_lower:
-                found_skills.append(skill)
-        
+        found_skills = [skill for skill in general_skills if skill.lower() in job_lower]
         return {'role': 'general', 'skills': found_skills if found_skills else ['Programming', 'Problem Solving']}
 
     def enhanced_analysis(self, resume_text: str, job_description: str) -> Dict:
-        """Enhanced local analysis without external APIs"""
         resume_lower = resume_text.lower()
         job_lower = job_description.lower()
-        
-        # Get role-specific skills
         role_data = self.get_role_specific_skills(job_description)
         job_skills = role_data['skills']
         detected_role = role_data['role']
         
-        # Find skills present in resume
         resume_skills = []
         for skill in job_skills:
             skill_variations = [skill.lower(), skill.lower().replace(' ', ''), skill.lower().replace('.', '')]
@@ -232,34 +359,28 @@ class ATSAnalyzer:
                 skill_variations.extend(['nodejs', 'node js'])
             elif skill.lower() == 'rest api':
                 skill_variations.extend(['restful', 'rest', 'api'])
-            
             for variation in skill_variations:
                 if variation in resume_lower:
                     resume_skills.append(skill)
                     break
         
-        # Remove duplicates
         resume_skills = list(dict.fromkeys(resume_skills))
-        
-        # Find missing skills
         missing_skills = [skill for skill in job_skills if skill not in resume_skills]
         
-        # Calculate keyword match (more lenient for short job descriptions)
-        job_words = set(re.findall(r'\b\w{3,}\b', job_lower))
-        resume_words = set(re.findall(r'\b\w{3,}\b', resume_lower))
+        # Fix for f-string backslash issue - extract regex pattern to variable
+        word_pattern = r'\b\w{3,}\b'
+        job_words = set(re.findall(word_pattern, job_lower))
+        resume_words = set(re.findall(word_pattern, resume_lower))
         common_words = job_words.intersection(resume_words)
         
-        if len(job_words) < 10:  # Short job description
+        if len(job_words) < 10:
             keyword_match = min(100, (len(common_words) / max(len(job_words), 1)) * 100 + 20)
         else:
             keyword_match = (len(common_words) / len(job_words) * 100) if job_words else 0
         
-        # Calculate ATS score
         if len(job_skills) > 0:
             skills_match_percentage = (len(resume_skills) / len(job_skills)) * 100
             missing_critical_skills = len(missing_skills)
-            
-            # Base score calculation
             if skills_match_percentage >= 80:
                 base_score = 85
             elif skills_match_percentage >= 60:
@@ -270,40 +391,15 @@ class ATSAnalyzer:
                 base_score = 55
             else:
                 base_score = 45
-            
-            # Adjust for keyword match
             keyword_bonus = min(15, keyword_match * 0.15)
-            
-            # Penalty for missing skills
             missing_penalty = min(25, missing_critical_skills * 5)
-            
             ats_score = max(20, min(100, int(base_score + keyword_bonus - missing_penalty)))
         else:
-            ats_score = 60  # Default score
-        
-        # Generate role-specific recommendations
+            ats_score = 60
+
         recommendations = []
         if missing_skills:
             recommendations.append(f"Add these {detected_role.replace('_', ' ').title()} skills: {', '.join(missing_skills[:4])}")
-        
-        if detected_role == 'java_developer':
-            recommendations.extend([
-                "Include specific Java frameworks (Spring Boot, Hibernate)",
-                "Mention build tools (Maven/Gradle) experience",
-                "Add database experience (MySQL, PostgreSQL)"
-            ])
-        elif detected_role == 'frontend_developer':
-            recommendations.extend([
-                "Showcase responsive design skills",
-                "Include CSS preprocessors (Sass/Less) if applicable",
-                "Mention JavaScript frameworks and libraries"
-            ])
-        elif detected_role == 'python_developer':
-            recommendations.extend([
-                "Include Python web frameworks (Django/Flask)",
-                "Add data manipulation libraries (Pandas, NumPy)",
-                "Mention API development experience"
-            ])
         
         recommendations.extend([
             "Use quantifiable achievements with numbers and percentages",
@@ -311,12 +407,9 @@ class ATSAnalyzer:
             "Add years of experience with each technology"
         ])
         
-        # Strengths and weaknesses
         strengths = []
         weaknesses = []
-        
         skill_match_ratio = len(resume_skills) / len(job_skills) if job_skills else 0
-        
         if skill_match_ratio >= 0.8:
             strengths.append(f"Excellent skill match for {detected_role.replace('_', ' ').title()} role")
         elif skill_match_ratio >= 0.6:
@@ -334,7 +427,6 @@ class ATSAnalyzer:
         if skill_match_ratio < 0.5:
             weaknesses.append("Significant skill gap for this role")
         
-        # Overall feedback
         if ats_score >= 80:
             feedback = f"Excellent match for {detected_role.replace('_', ' ').title()} position! Your skills align well with requirements."
         elif ats_score >= 65:
@@ -357,12 +449,9 @@ class ATSAnalyzer:
 def main():
     st.title("🎯 ATS Resume Analyzer")
     st.markdown("Upload your resume and job description to get actionable insights for better ATS compatibility!")
-    
-    # Sidebar for API configuration
+
     with st.sidebar:
         st.header("⚙️ Configuration")
-        
-        # LLM Provider selection
         provider = st.selectbox(
             "Choose Analysis Method",
             ["Enhanced Local Analysis", "OpenAI GPT", "Hugging Face"],
@@ -371,14 +460,12 @@ def main():
         
         api_key = None
         if provider == "OpenAI GPT":
-            api_key = st.text_input("OpenAI API Key", type="password", 
-                                   help="Enter your OpenAI API key")
+            api_key = st.text_input("OpenAI API Key", type="password", help="Enter your OpenAI API key")
             if not OPENAI_AVAILABLE:
                 st.error("OpenAI library not installed. Run: pip install openai")
         elif provider == "Hugging Face":
-            api_key = st.text_input("HuggingFace API Key (Optional)", type="password",
-                                   help="Get free API key from huggingface.co")
-        
+            api_key = st.text_input("HuggingFace API Key (Optional)", type="password", help="Get free API key from huggingface.co")
+
         st.markdown("---")
         st.markdown("### 💡 Analysis Methods")
         st.markdown("""
@@ -386,8 +473,6 @@ def main():
         - **OpenAI GPT**: Most accurate analysis (Requires API key & credits)
         - **Hugging Face**: Good analysis (Free tier available)
         """)
-        
-        st.markdown("---")
         st.markdown("### 📋 Instructions")
         st.markdown("""
         1. Upload your resume (PDF, DOCX, or TXT)
@@ -395,24 +480,18 @@ def main():
         3. Choose analysis method
         4. Click 'Analyze Resume' for insights
         """)
-        
-        st.markdown("---")
         st.markdown("### 🔒 Privacy")
         st.info("Your documents are processed locally and not stored.")
-    
-    # Map provider names to internal values
+
     provider_map = {
         "Enhanced Local Analysis": "demo",
         "OpenAI GPT": "openai", 
         "Hugging Face": "huggingface"
     }
-    
-    # Initialize analyzer
+
     analyzer = ATSAnalyzer(api_key, provider_map[provider])
-    
-    # Main content area
+
     col1, col2 = st.columns([1, 1])
-    
     with col1:
         st.header("📄 Upload Resume")
         uploaded_resume = st.file_uploader(
@@ -423,57 +502,50 @@ def main():
         
         if uploaded_resume:
             st.success(f"✅ Resume uploaded: {uploaded_resume.name}")
-            
-            # Extract and display text preview
             resume_text = analyzer.extract_text_from_file(uploaded_resume)
             if resume_text:
                 with st.expander("📖 Resume Text Preview"):
-                    st.text_area("Resume Content", resume_text[:1000] + "..." if len(resume_text) > 1000 else resume_text, 
-                               height=200, disabled=True)
-    
+                    st.text_area("Resume Content", resume_text[:1000] + "..." if len(resume_text) > 1000 else resume_text, height=200, disabled=True)
+
     with col2:
         st.header("💼 Job Description")
         job_description = st.text_area(
             "Paste the job description",
             height=300,
-            placeholder="Paste the complete job description here including requirements, responsibilities, and qualifications..."
+            placeholder="Paste the complete job description here..."
         )
-        
         if job_description:
             st.success("✅ Job description added")
-    
-    # Analysis section
+
     if uploaded_resume and job_description:
         st.markdown("---")
-        
         if st.button("🔍 Analyze Resume", type="primary", use_container_width=True):
             with st.spinner("Analyzing your resume... This may take a few moments."):
                 resume_text = analyzer.extract_text_from_file(uploaded_resume)
                 analysis = analyzer.analyze_resume_with_llm(resume_text, job_description)
-                
-                # Display results with debug info
+
                 st.success("Analysis Complete!")
                 
-                # Debug information in expander
+                # Fixed debug information section - extract regex pattern to variable
+                word_pattern = r'\b\w{3,}\b'
+                job_words_count = len(set(re.findall(word_pattern, job_description.lower())))
+                resume_words_count = len(set(re.findall(word_pattern, resume_text.lower())))
+                
                 with st.expander("🔍 Debug Information"):
                     st.write(f"**Job Description Length:** {len(job_description)} characters")
                     st.write(f"**Resume Length:** {len(resume_text)} characters")
-                    st.write(f"**Unique Job Words:** {len(set(re.findall(r'\\b\\w{3,}\\b', job_description.lower())))}")
-                    st.write(f"**Unique Resume Words:** {len(set(re.findall(r'\\b\\w{3,}\\b', resume_text.lower())))}")
+                    st.write(f"**Unique Job Words:** {job_words_count}")
+                    st.write(f"**Unique Resume Words:** {resume_words_count}")
                     st.write(f"**Analysis Method:** {provider}")
-                
-                # Score section
+
                 col1, col2, col3 = st.columns(3)
                 with col1:
-                    st.metric("ATS Score", f"{analysis['ats_score']}/100", 
-                             delta=f"{analysis['ats_score'] - 70}%" if analysis['ats_score'] > 70 else f"{analysis['ats_score'] - 70}%")
+                    st.metric("ATS Score", f"{analysis['ats_score']}/100")
                 with col2:
                     st.metric("Keyword Match", f"{analysis['keyword_match_percentage']:.1f}%")
                 with col3:
-                    missing_count = len(analysis['missing_skills'])
-                    st.metric("Missing Skills", missing_count, delta=-missing_count if missing_count > 0 else 0)
-                
-                # Detailed analysis
+                    st.metric("Missing Skills", len(analysis['missing_skills']))
+
                 tab1, tab2, tab3, tab4 = st.tabs(["📊 Skills Analysis", "💡 Recommendations", "💪 Strengths & Weaknesses", "📝 Overall Feedback"])
                 
                 with tab1:
@@ -485,9 +557,12 @@ def main():
                             st.write(f"• {skill}")
                     
                     with col2:
-                        st.subheader("✅ Your Skills")
-                        for skill in analysis['resume_present_skills']:
-                            st.write(f"• {skill}")
+                        st.subheader("✅ Skills Found")
+                        if analysis['resume_present_skills']:
+                            for skill in analysis['resume_present_skills']:
+                                st.write(f"• {skill}")
+                        else:
+                            st.write("No matching skills found")
                     
                     with col3:
                         st.subheader("❌ Missing Skills")
@@ -495,13 +570,13 @@ def main():
                             for skill in analysis['missing_skills']:
                                 st.write(f"• {skill}")
                         else:
-                            st.success("Great! You have all required skills.")
-                
+                            st.write("All required skills found!")
+
                 with tab2:
-                    st.subheader("🚀 Recommended Improvements")
-                    for i, recommendation in enumerate(analysis['recommended_additions'], 1):
-                        st.write(f"{i}. {recommendation}")
-                
+                    st.subheader("💡 Recommendations")
+                    for i, rec in enumerate(analysis['recommended_additions'], 1):
+                        st.write(f"{i}. {rec}")
+
                 with tab3:
                     col1, col2 = st.columns(2)
                     
@@ -513,42 +588,21 @@ def main():
                     with col2:
                         st.subheader("⚠️ Areas for Improvement")
                         for weakness in analysis['weaknesses']:
-                            st.warning(f"→ {weakness}")
-                
+                            st.warning(f"! {weakness}")
+
                 with tab4:
-                    st.subheader("📋 Detailed Feedback")
+                    st.subheader("📝 Overall Feedback")
                     st.write(analysis['overall_feedback'])
-                
-                # Action items
-                st.markdown("---")
-                st.subheader("🎯 Next Steps")
-                
-                if analysis['missing_skills']:
-                    st.error("**Priority Actions:**")
-                    st.write("1. Add the missing skills to your resume if you possess them")
-                    st.write("2. Consider learning the missing skills that are critical for the role")
-                    st.write("3. Use similar keywords and phrases from the job description")
-                
-                if analysis['ats_score'] < 80:
-                    st.warning("**ATS Optimization Needed:**")
-                    st.write("- Increase keyword density for important terms")
-                    st.write("- Use standard section headings (Experience, Education, Skills)")
-                    st.write("- Include more quantifiable achievements")
-                
-                # Download report option
-                st.markdown("---")
-                report_data = {
-                    "analysis_date": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-                    "filename": uploaded_resume.name,
-                    "analysis": analysis
-                }
-                
-                st.download_button(
-                    label="📥 Download Analysis Report",
-                    data=json.dumps(report_data, indent=2),
-                    file_name=f"ats_analysis_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json",
-                    mime="application/json"
-                )
+                    
+                    # Score interpretation
+                    if analysis['ats_score'] >= 80:
+                        st.success("🎉 Excellent! Your resume is well-optimized for ATS systems.")
+                    elif analysis['ats_score'] >= 65:
+                        st.info("👍 Good! Your resume has solid ATS compatibility with room for improvement.")
+                    elif analysis['ats_score'] >= 50:
+                        st.warning("⚠️ Fair. Consider making some improvements to boost your ATS score.")
+                    else:
+                        st.error("❌ Needs Improvement. Significant changes recommended for better ATS compatibility.")
 
 if __name__ == "__main__":
     main()
